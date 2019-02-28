@@ -1,0 +1,6 @@
+UBUNTU:
+  DISTRO: bionic
+
+KUBE_MASTER:
+  IP: "{{ hostvars['kube.master'].ansible_host }}"
+

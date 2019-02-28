@@ -1,0 +1,51 @@
+---
+- name: find join command for nodes
+  shell: "cat /etc/kubernetes/kubeadm-join.sh"
+  register: cat_kubeadm_join
+  when: inventory_hostname == 'kube.master'
+  changed_when: false
+
+- name: copy join line
+  set_fact:
+    kubeadm_join: "{{cat_kubeadm_join.stdout}}"
+  when: inventory_hostname == 'kube.master'
+
+- name: set node join script to nodes
+  command: systemctl stop kubelet
+  when: inventory_hostname != 'kube.master'
+
+- name: reset kubernetes
+  command: kubeadm reset -f
+  when: inventory_hostname != 'kube.master'
+
+- name: create empty file for join line
+  file: path=/etc/kubernetes state=directory
+  when: inventory_hostname != 'kube.master'
+- file:
+    path: /etc/kubernetes/kubeadm-join.sh
+    state: touch
+  when: inventory_hostname != 'kube.master'
+
+- copy:
+    dest: /etc/kubernetes/kubeadm-join.sh
+    content: "{{ hostvars['kube.master'].kubeadm_join }}"
+    owner: root
+    group: root
+    mode: 0600
+  when: inventory_hostname != 'kube.master'
+
+- name: register nodes
+  shell: >
+    bash /etc/kubernetes/kubeadm-join.sh
+  when: inventory_hostname != 'kube.master'
+
+- name: checking all nodes up
+  shell: >
+      export KUBECONFIG=/etc/kubernetes/admin.conf ;
+      kubectl get nodes {{item}}
+  register: result
+  until: result.stdout.find(" Ready ") != -1
+  retries: 100
+  delay: 10
+  loop: "{{ groups['kubenodes'] }}"
+  when: inventory_hostname == 'kube.master'

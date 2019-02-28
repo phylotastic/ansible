@@ -47,6 +47,7 @@
     - unzip
     - rsync
     - bash-completion
+    - ntp
 
 - name: remove temporary packages
   apt:
@@ -54,4 +55,3 @@
     state: absent
   loop:
     - nmap
-

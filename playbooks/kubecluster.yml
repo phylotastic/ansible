@@ -1,0 +1,25 @@
+- hosts: kubenodes:kubemaster
+  become: true
+  become_user: root
+
+  vars_prompt:
+    - name: CONFIRM
+      prompt: "Running kubecluster playbook will nuke existing cluster.\n\nType 'Rebuild nodes' to continue"
+      private: false
+
+  pre_tasks:
+    - name: check if master is ready
+      stat:
+        path: /etc/kubernetes/kubeadm-join.sh
+      register: res
+      when: inventory_hostname == 'kube.master'
+    - fail:
+        msg: "Run kubemaster playbook before setting up the cluster"
+      when: inventory_hostname == 'master' and not res.stat.exists
+    - name: Check if to continue with creating kube.master
+      fail:
+        msg: "Write 'Rebuild nodes' if you do want to rebuild kube.cluster"
+      when: CONFIRM != "Rebuild nodes"
+
+  roles:
+    - kubecluster

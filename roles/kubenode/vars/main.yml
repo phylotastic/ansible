@@ -1,0 +1,6 @@
+---
+kube:
+  version: 1.13.4*
+docker:
+  version: 18.06*
+distro: "{{ UBUNTU.DISTRO }}"

@@ -1,0 +1,53 @@
+---
+- name: remove kube master
+  command: kubeadm reset -f
+  when: destroy
+- file: path=/etc/kubernetes/kubeadm-join.sh state=absent
+  ignore_errors: true
+  when: destroy
+
+- name: make sure services are running
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop:
+    - docker
+    - ntp
+    - kubelet
+
+- name: initialize kube master
+  command: "kubeadm init"
+  register: output
+  args:
+    creates: /etc/kubernetes/kubeadm-join.sh
+
+- debug:
+    msg: "{{ output }}"
+
+- name: save kubelet join line
+  copy:
+    dest: /etc/kubernetes/kubeadm-join.sh
+    content: "{{output.stdout_lines[-1]}}"
+    owner: root
+    group: root
+    mode: 0600
+  when: output.stdout.find("kubeadm join") != -1
+
+- service: name=kubelet state=started enabled=yes
+
+- name: install weave net
+  file:
+    name: /etc/kubectl
+    state: directory
+
+- shell: >
+    export KUBECONFIG=/etc/kubernetes/admin.conf ;
+    kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+- shell: >
+    export KUBECONFIG=/etc/kubernetes/admin.conf ;
+    kubectl get pods -n kube-system |grep weave
+  register: result
+  until: result.stdout.find("Running") != -1 and result.stdout.find("NotRunning") == -1
+  retries: 100
+  delay: 10

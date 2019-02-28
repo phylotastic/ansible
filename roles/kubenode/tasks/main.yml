@@ -1,0 +1,143 @@
+---
+- name: allow to update packages
+  dpkg_selections:
+    name: "{{ item }}"
+    selection: install
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+    - kubernetes-cni
+    - docker-ce
+
+- name: ip_forward
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: 1
+    state: present
+    reload: true
+    sysctl_set: true
+
+- name: enable netfilter for bridge network
+  modprobe:
+    name: br_netfilter
+    state: present
+
+- name: enable bridge network
+  sysctl:
+    name: net.bridge.bridge-nf-call-iptables
+    value: 1
+    state: present
+    reload: yes
+    sysctl_set: yes
+
+- name: remove swap mount
+  mount:
+      state: absent
+      path: "/*"
+      fstype: swap
+
+- name: Disable swap
+  shell: swapon --bytes && swapoff -a
+  register: output
+  changed_when: output.stdout != ""
+
+- name: disable swap for sysctl
+  sysctl:
+    name: vm.swappiness
+    value: 0
+
+- name: set nfs-client
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - nfs-client
+
+- name: Set Keyring for docker
+  apt_key:
+    url:  https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Set docker repo
+  apt_repository:
+    repo: "deb https://download.docker.com/linux/ubuntu {{ UBUNTU.DISTRO }} stable"
+    state: present
+    filename: docker
+
+- name: install docker
+  apt:
+    name: "{{ item }}={{ docker.version }}"
+    state: present
+  loop:
+    - docker-ce
+
+- name: Set Keyring for Kubernetes
+  apt_key:
+    url:  https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    state: present
+
+- name: Set Kubernetes repo
+  apt_repository:
+    repo: "deb https://apt.kubernetes.io/ kubernetes-xenial main"
+    state: present
+    filename: kubernetes
+
+# - name: kill the kube! Har har har
+#   dpkg_selections:
+#     name: "{{ item }}"
+#     selection: purge
+#   loop:
+#     - kubelet
+#     - kubeadm
+#     - kubectl
+#     - kubernetes-cni
+#     - docker-ce
+
+# - name: nuke kubernetes
+#   apt:
+#     # name: '{{ item }}={{ kube.version }}'
+#     name: "{{ item }}"
+#     state: absent
+#     purge: true
+#     allow_unauthenticated: true
+#   loop:
+#     - kubelet
+#     - kubeadm
+#     - kubectl
+#     - kubernetes-cni
+
+# - name: uninstall docker
+#   apt:
+#     name: docker-ce
+#     state: absent
+
+- name: install kubernetes
+  apt:
+    name: '{{ item }}={{ kube.version }}'
+    state: present
+    allow_unauthenticated: true
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+
+- name: make kubernetes not upgradable
+  dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop:
+    - kubelet
+    - kubeadm
+    - kubectl
+    - docker-ce
+
+- name: make sure services are running
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop:
+    - docker
+    - ntp
+    - kubelet
