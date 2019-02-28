@@ -1,0 +1,57 @@
+---
+- name: Create groups
+  become: true
+  become_user: root
+  group:
+    name: "{{ item.name }}"
+    state: present
+    system: "{{ item.system }}"
+  loop:
+    - { name: sysadmin, system: false }
+    - { name: docker, system: true }
+
+- name: Create users
+  user:
+    name: "{{ item.name }}"
+    groups:
+      - users
+      - adm
+      - docker
+      - sysadmin
+    append: yes
+    shell: /bin/bash
+  loop: "{{ users }}"
+
+- name: Add Authorized Key
+  authorized_key:
+    user: "{{ item.name }}"
+    key: "{{ item.sshkey }}"
+    state: present
+  loop: "{{ users }}"
+
+- name: Allow sudo no pass
+  lineinfile:
+    dest: /etc/sudoers
+    state: present
+    regexp: '^%sysadmin'
+    line: '%sysadmin ALL=(ALL) NOPASSWD: ALL'
+    validate: 'visudo -cf %s'
+
+- name: default packages
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - apt-transport-https
+    - htop
+    - unzip
+    - rsync
+    - bash-completion
+
+- name: remove temporary packages
+  apt:
+    name: "{{ item }}"
+    state: absent
+  loop:
+    - nmap
+

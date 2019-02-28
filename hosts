@@ -1,0 +1,20 @@
+# VARS
+
+k1 ansible_host=134.209.114.140
+k2 ansible_host=134.209.114.168
+
+kube.master ansible_host=134.209.114.140
+
+## GROUPS
+
+[local]
+127.0.0.1 ansible_connection=local
+
+[all]
+k[1:2]
+
+[kubenodes]
+k2
+
+[kubemaster]
+kube.master

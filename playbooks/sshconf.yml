@@ -1,0 +1,9 @@
+- hosts: local
+  tasks:
+    - blockinfile:
+        path: ~/.ssh/config
+        block: |
+          host k1 134.209.114.140
+            HostName 134.209.114.140
+          host k2 134.209.114.168
+            HostName 134.209.114.168
