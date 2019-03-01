@@ -1,0 +1,48 @@
+---
+- name: copy files
+  file:
+    path: /etc/phylokube/phylo
+    state: directory
+    mode: 0770
+- template:
+    src: "{{ item }}"
+    dest: /etc/phylokube/phylo
+  loop: "{{ modules }}"
+
+- name: delete all
+  shell: |
+    export KUBECONFIG=/etc/kubernetes/admin.conf;
+    kubectl delete -f /etc/phylokube/phylo/namespace.yml
+  ignore_errors: true
+  when: destroy
+
+- name: wait while phylo goes away
+  shell: kubectl get namespaces | grep -c "^phylo\\b" || true
+  register: result
+  until: result.stdout == "0"
+  retries: 100
+  delay: 2
+  when: destroy
+
+- name: create all
+  shell: |
+    export KUBECONFIG=/etc/kubernetes/admin.conf;
+    kubectl apply -f /etc/phylokube/phylo/{{ item }}
+  loop: "{{ modules }}"
+
+# - name: check for success
+#   shell: >
+#     export KUBECONFIG=/etc/kubernetes/admin.conf;
+#     kubectl get configmap -n phylo
+#   register: result
+#   until: result.stdout.find("phylo...") != -1
+#   retries: 100
+#   delay: 2
+
+# - shell: >
+#     export KUBECONFIG=/etc/kubernetes/admin.conf;
+#     kubectl get secrets -n phylo
+#   register: result
+#   until: result.stdout.find("phylo...") != -1
+#   retries: 100
+#   delay: 2

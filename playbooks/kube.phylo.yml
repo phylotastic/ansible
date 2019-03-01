@@ -1,0 +1,29 @@
+- hosts: kubemaster
+  become: true
+  become_user: root
+
+  vars:
+    destroy: true
+
+  vars_prompt:
+    - name: CONFIRM
+      prompt: "This will destroy and rebuild PHYLO.\n\nType 'yes' to continue"
+      private: false
+
+  pre_tasks:
+    - name: check if master is ready
+      stat:
+        path: /etc/kubernetes/kubeadm-join.sh
+      register: res
+      when: inventory_hostname == 'kube.master'
+    - fail:
+        msg: "Run kubemaster playbook before setting up the cluster"
+      when: inventory_hostname == 'master' and not res.stat.exists
+    - fail:
+        msg: "Answer 'yes' if you do want to rebuild all PHYLO services"
+      when: CONFIRM != "yes" and destroy
+      changed_when: false
+
+  roles:
+    - kube.phylo
+    - kube.phylo.tnrs

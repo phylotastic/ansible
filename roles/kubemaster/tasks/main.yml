@@ -17,7 +17,7 @@
     - kubelet
 
 - name: initialize kube master
-  command: "kubeadm init"
+  command: "kubeadm init --pod-network-cidr=192.168.0.0/24"
   register: output
   args:
     creates: /etc/kubernetes/kubeadm-join.sh

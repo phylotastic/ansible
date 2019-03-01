@@ -4,3 +4,5 @@ UBUNTU:
 KUBE_MASTER:
   IP: "{{ hostvars['kube.master'].ansible_host }}"
 
+TNRS:
+  NODE_PORT: 30426

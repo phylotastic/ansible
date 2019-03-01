@@ -1,0 +1,25 @@
+---
+- name: create dir
+  file:
+    path: /etc/phylokube/phylo/tnrs
+    state: directory
+    mode: 0770
+
+- name: copy file
+  template:
+    src: app.yml
+    dest: /etc/phylokube/phylo/tnrs
+
+- name: destroy tnrs
+  shell: |
+    export KUBECONFIG=/etc/kubernetes/admin.conf
+    kubectl delete -f /etc/phylokube/phylo/tnrs/app.yml
+  changed_when: false
+  ignore_errors: true
+  when: destroy
+
+- name: deploy tnrs
+  shell: |
+    export KUBECONFIG=/etc/kubernetes/admin.conf
+    kubectl apply -f /etc/phylokube/phylo/tnrs/app.yml
+  changed_when: false
