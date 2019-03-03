@@ -1,0 +1,54 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: taxon-species
+  namespace: phylo
+  labels:
+    app: taxon-species
+    tier: frontend
+spec:
+  type: NodePort
+  ports:
+    - port: 80
+      nodePort: {{ TAXON_SPECIES.NODE_PORT }}
+      targetPort: 5052
+  selector:
+    app: taxon-species
+    tier: frontend
+
+---
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: taxon-species
+  namespace: phylo
+spec:
+  replicas: 1
+  template:
+    metadata:
+      namespace: phylo
+      name: taxon-species
+      labels:
+        app: taxon-species
+        tier: frontend
+    spec:
+      containers:
+        - name: taxon-species
+          image: phylotastic/taxon_species:v0.0.1
+          ports:
+            - containerPort: 5052
+              name: http
+
+        - name: mongodb
+          image: mongo:3.4
+          ports:
+            - containerPort: 27017
+              name: mongodb
+
+        - name: mongo-seed
+          image: phylotastic/mongo-seed:v0.0.1
+          command:
+            - bash
+            - -c
+            - "sleep 10 && mongoimport --host 127.0.0.1 --db TaxonSpecies --mode upsert --type json --file /taxonSpecieslist.json && sleep 1000000"

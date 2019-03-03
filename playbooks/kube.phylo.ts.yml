@@ -1,0 +1,9 @@
+- hosts: kubemaster
+  become: true
+  become_user: root
+
+  vars:
+    destroy: true
+
+  roles:
+    - kube.phylo.ts
